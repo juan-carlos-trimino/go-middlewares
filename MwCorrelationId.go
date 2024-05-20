@@ -1,9 +1,11 @@
 package middlewares
 
 import (
-	"context"
+  "context"
   "fmt"
   "net/http"
+  //The option -u instructs 'get' to update the module with dependencies.
+  //go get -u github.com/google/uuid
   "github.com/google/uuid"
   "time"
 )
