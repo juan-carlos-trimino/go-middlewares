@@ -22,16 +22,16 @@ $ git tag "v1.0.0"
 $ git push origin main --tags
 
 To use the package, install it (go get -u {copy the repo url from GitHub}).
-$ go get -u github.com/juan-carlos-trimino/gposu
+$ go get -u github.com/juan-carlos-trimino/gpmiddlewares
 
 Next, open the file that will use the package and add this line
 ("github.com/{GitHub-Username}/{Repo-Name}").
 
-import "github.com/juan-carlos-trimino/gposu"
+import "github.com/juan-carlos-trimino/gpmiddlewares"
 
 To upgrade/downgrade the version of the package, execute
 (go get -u "{package-name}@{git-commit-hash}").
-$ go get -u "github.com/juan-carlos-trimino/gposu@b33734a"
+$ go get -u "github.com/juan-carlos-trimino/gpmiddlewares@b33734a"
 ***/
 
 import (
