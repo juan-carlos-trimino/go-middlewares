@@ -2,7 +2,7 @@ package middlewares
 
 import (
   "context"
-  "finance/sessions"
+  "github.com/juan-carlos-trimino/gpsessions"
   "net/http"
 )
 
