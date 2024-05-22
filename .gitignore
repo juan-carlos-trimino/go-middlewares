@@ -5,6 +5,7 @@
 !.gitignore
 !ChainMiddlewares.go
 !go.mod
+!go.sum
 !LICENSE
 !MwContextKey.go
 !MwCorrelationId.go
