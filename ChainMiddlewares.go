@@ -29,22 +29,23 @@ Next, open the file that will use the package and add this line
 
 import "github.com/juan-carlos-trimino/gpmiddlewares"
 
-To upgrade/downgrade the version of the package, execute
+To upgrade/downgrade the version of the package, move to the root of the module's directory
+structure (where the go.mod file is located) and execute
 (go get -u "{package-name}@{git-commit-hash}").
 $ go get -u "github.com/juan-carlos-trimino/gpmiddlewares@b33734a"
 ***/
 
 import (
-  "net/http"
+	"net/http"
 )
 
 type Middleware func(http.HandlerFunc) http.HandlerFunc
 
 func ChainMiddlewares(originalHandler http.HandlerFunc, mw []Middleware) http.HandlerFunc {
-  wrapHandler := originalHandler
-  length := len(mw)
-  for idx := length - 1; idx > -1; idx-- {
-    wrapHandler = mw[idx](wrapHandler)
-  }
-  return wrapHandler
+	wrapHandler := originalHandler
+	length := len(mw)
+	for idx := length - 1; idx > -1; idx-- {
+		wrapHandler = mw[idx](wrapHandler)
+	}
+	return wrapHandler
 }
