@@ -1,4 +1,4 @@
-module github.com/juan-carlos-trimino/gpmiddlewares
+module github.com/juan-carlos-trimino/go-middlewares
 
 go 1.24.3
 
