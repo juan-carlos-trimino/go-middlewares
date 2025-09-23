@@ -2,12 +2,12 @@ package middlewares
 
 /***
 Create repo and clone it.
-$ git clone https://github.com/juan-carlos-trimino/gpmiddlewares.git
+$ git clone git@github.com:juan-carlos-trimino/go-middlewares.git
 
 Initialize Go.
-$ cd gpmiddlewares
+$ cd go-middlewares
 Execute "go mod init github.com/{GitHub-Username}/{Repo-Name}
-$ go mod init github.com/juan-carlos-trimino/gpmiddlewares
+$ go mod init github.com/juan-carlos-trimino/go-middlewares
 
 Create the file "main.go" and add the code to it.
 
@@ -22,17 +22,19 @@ $ git tag "v1.0.0"
 $ git push origin main --tags
 
 To use the package, install it (go get -u {copy the repo url from GitHub}).
-$ go get -u github.com/juan-carlos-trimino/gpmiddlewares
+$ go get -u github.com/juan-carlos-trimino/go-middlewares
 
 Next, open the file that will use the package and add this line
 ("github.com/{GitHub-Username}/{Repo-Name}").
 
-import "github.com/juan-carlos-trimino/gpmiddlewares"
+import "github.com/juan-carlos-trimino/go-middlewares"
 
 To upgrade/downgrade the version of the package, move to the root of the module's directory
 structure (where the go.mod file is located) and execute
 (go get -u "{package-name}@{git-commit-hash}").
-$ go get -u "github.com/juan-carlos-trimino/gpmiddlewares@b33734a"
+$ go get -u "github.com/juan-carlos-trimino/go-middlewares@b33734a"
+or
+$ go get -u "github.com/juan-carlos-trimino/go-middlewares@v1.1.0"
 ***/
 
 import (
