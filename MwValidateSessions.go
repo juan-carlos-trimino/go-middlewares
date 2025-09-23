@@ -32,7 +32,7 @@ import "github.com/juan-carlos-trimino/go-middlewares"
 To upgrade/downgrade the version of the package, move to the root of the module's directory
 structure (where the go.mod file is located) and execute
 (go get -u "{package-name}@{git-commit-hash}").
-$ go get -u "github.com/juan-carlos-trimino/go-middlewares@xxxxxxx"
+$ go get -u "github.com/juan-carlos-trimino/go-middlewares@v1.1.0"
 ***/
 
 import (

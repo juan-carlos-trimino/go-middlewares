@@ -19,10 +19,10 @@ func CorrelationId(handler http.HandlerFunc) http.HandlerFunc {
 		//Creating a new context from a parent context.
 		ctx := context.WithValue(req.Context(), correlationIdKey, uuid.String())
 		ctx = context.WithValue(ctx, startTimeKey, time.Now())
-		fmt.Printf("New request with correlation id: %s\n", uuid)
+		fmt.Printf("xxxxxNew request with correlation id: %s\n", uuid)
 		//Calling the handler with the new context.
 		handler.ServeHTTP(res, req.WithContext(ctx))
-		fmt.Printf("Request took %vms\nRequest correlation id: %s\n",
+		fmt.Printf("xxxxxRequest took %vms\nRequest correlation id: %s\n",
 			time.Since(start).Microseconds(), uuid)
 	}
 }
