@@ -8,6 +8,7 @@ require (
 )
 
 require (
+	github.com/juan-carlos-trimino/gplogger v1.0.7 // indirect
 	github.com/juan-carlos-trimino/gposu v1.0.1 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 )
