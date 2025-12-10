@@ -11,10 +11,16 @@ import (
 
 func CorrelationId(handler http.HandlerFunc) http.HandlerFunc {
   return func(res http.ResponseWriter, req *http.Request) {
-    uuid := uuid.New()
+    cId := req.Header.Get("X-Correlation-Id")
+    if cId == "" {
+      //The header is not present in the request, generate a new unique id.
+      cId = uuid.New().String()
+    }
     //Creating a new context from a parent context.
-    ctx := context.WithValue(req.Context(), correlationIdKey, uuid.String())
+    ctx := context.WithValue(req.Context(), correlationIdKey, cId)
     ctx = context.WithValue(ctx, startTimeKey, time.Now())
+    //Add the correlation id to the response header.
+    res.Header().Set("X-Correlation-Id", cId)
     //Calling the handler with the new context.
     handler.ServeHTTP(res, req.WithContext(ctx))
   }
