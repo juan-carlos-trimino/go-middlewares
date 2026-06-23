@@ -1,0 +1,10 @@
+# Ignore everything.
+**
+
+# But include these...
+!.gitignore
+# For the Delve debugger.
+!launch.json
+!LICENSE
+!README.md
+!settings.json
