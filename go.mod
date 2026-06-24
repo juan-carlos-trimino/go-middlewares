@@ -19,6 +19,7 @@ require (
 )
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/juan-carlos-trimino/gposu v1.0.1 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 )

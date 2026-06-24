@@ -5,27 +5,25 @@ import (
   "time"
 )
 
-// To avoid context keys collisions, a best practice is to create an unexported custom type.
+//To avoid context keys collisions, a best practice is to create an unexported custom type.
 type ctxKey string
 
 /***
-The correlationIdKey constant is unexported. Hence, there's no risk that another package using the
-same context could override the value that is already set. Even if another package creates the same
-correlationIdKey based on a ctxKey type as well, it will be a different key.
+The correlationIdKey constant is unexported. Hence, there's no risk that another package using the same context could override the value
+that is already set. Even if another package creates the same correlationIdKey based on a ctxKey type as well, it will be a different key.
 ***/
 const correlationIdKey ctxKey = "correlationIdKey"
 const sessionTokenKey ctxKey = "sessionTokenKey"
 const startTimeKey ctxKey = "startTimeKey"
+const adminVerificationKey ctxKey = "adminVerificationKey"
 
 type MwContextKey struct{}
 
 /***
-Packages that define a Context key should provide type-safe accessors for the values stored using
-that key.
+Packages that define a Context key should provide type-safe accessors for the values stored using that key.
 ***/
 func (ck MwContextKey) GetCorrelationId(ctx context.Context) (cid string, ok bool) {
-  //The Value method returns an interface{} so a type assertion is needed.
-  //A type assertion is an operation applied to an interface value.
+  //The Value method returns an interface{} so a type assertion is needed. A type assertion is an operation applied to an interface value.
   cid, ok = ctx.Value(correlationIdKey).(string)
   return
 }
@@ -39,5 +37,10 @@ func (ck MwContextKey) GetSessionToken(ctx context.Context) (sessionToken string
 func (ck MwContextKey) GetStartTime(ctx context.Context) (startTime time.Time, ok bool) {
   //A type assertion is an operation applied to an interface value.
   startTime, ok = ctx.Value(startTimeKey).(time.Time)
+  return
+}
+
+func (ck MwContextKey) GetAdminVerification(ctx context.Context) (admin bool, ok bool) {
+  admin, ok = ctx.Value(adminVerificationKey).(bool)
   return
 }
