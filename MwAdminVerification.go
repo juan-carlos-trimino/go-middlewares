@@ -6,7 +6,7 @@ import (
   // $ go get -u github.com/golang-jwt/jwt/v5
   "github.com/golang-jwt/jwt/v5"
   "net/http"
-  "strings"
+  // "strings"
   "time"
 )
 
@@ -22,19 +22,25 @@ A JWT consists of three parts base64-encoded and separated by dots: Header.Paylo
 ***/
 func AdminVerification(handler http.HandlerFunc) http.HandlerFunc {
   return func(res http.ResponseWriter, req *http.Request) {
+    // var ctx context.Context
+    cookie, err := req.Cookie("admin_token")
+    if err != nil {
+      http.Error(res, "Authorization missing: ", http.StatusUnauthorized)
+      return
+    }
     //Extract token from Authorization header (Authorization: Bearer eyJhbGciOiJIUzI1Ni...).
-    authHeader := req.Header.Get("Authorization")
-    if authHeader == "" {
-      http.Error(res, "Authorization header required: ", http.StatusUnauthorized)
-      return
-    }
-    parts := strings.Split(authHeader, " ")  //Split "Bearer <token>".
-    //Case-insensitive check.
-    if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-      http.Error(res, "Invalid Authorization format: ", http.StatusUnauthorized)
-      return
-    }
-    claims, err := validateJwtToken(parts[1])
+    // authHeader := req.Header.Get("Authorization")
+    // if authHeader == "" {
+    //   http.Error(res, "Authorization header required: ", http.StatusUnauthorized)
+    //   return
+    // }
+    // parts := strings.Split(cookie.Value, " ")
+    // //Case-insensitive check.
+    // if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+    //   http.Error(res, "Invalid Authorization format: ", http.StatusUnauthorized)
+    //   return
+    // }
+    claims, err := validateJwtToken(cookie.Value)
     if err != nil {
       http.Error(res, "Invalid or expired token: ", http.StatusUnauthorized)
       return
