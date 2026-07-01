@@ -16,8 +16,7 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
       ctx = context.WithValue(req.Context(), sessionTokenKey, "")
     } else if exists := sess.SessionExists(cookie.Value); !exists {
       ctx = context.WithValue(req.Context(), sessionTokenKey, "")
-      //If the session token is present, but has expired, delete the session and return
-      //an unauthorized status.
+      //If the session token is present, but has expired, delete the session and return an unauthorized status.
     } else if sess.IsSessionExpired(cookie.Value) {
       ctx = context.WithValue(req.Context(), sessionTokenKey, "")
     } else if req.Method == http.MethodPost {
