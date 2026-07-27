@@ -34,10 +34,17 @@ func SecurityHeaders(handler http.HandlerFunc) http.HandlerFunc {
     https://blog.appcanary.com/2017/http-security-headers.html
     https://web.dev/articles/csp#inline-code-considered-harmful
     https://content-security-policy.com/
+
+    This HTML tag is a Content Security Policy (CSP) that restricts resource loading to your own domain and specific Google Fonts URLs.
+    default-src 'self': It blocks all scripts, images, connect requests, and other unlisted assets unless they come from your own
+      website domain.
+    style-src 'self' https://fonts.googleapis.com: It allows CSS stylesheets from your site and Google Fonts.
+    font-src 'self' https://fonts.gstatic.com: It allows your page to download the actual binary font files (woff2).
+    Safety: It is safe from a security standpoint because it restricts external code execution.
     ***/
-    res.Header().Add("Content-Security-Policy", "default-src 'none'; script-src 'self'; " +
-      "style-src 'self'; connect-src 'self'; img-src 'self'; frame-src 'self'; base-uri 'self';" +
-      " form-action 'self'; frame-ancestors 'none'")
+    res.Header().Add("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; " +
+      "connect-src 'self'; img-src 'self'; frame-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; " +
+      "font-src 'self' https://fonts.gstatic.com;")
     /***
     In modern browsers, X-XSS-Protection has been deprecated in favor of the
     Content-Security-Policy to disable the use of inline JavaScript. Its use can introduce XSS
