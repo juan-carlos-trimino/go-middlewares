@@ -80,12 +80,15 @@ func SecurityHeaders(handler http.HandlerFunc) http.HandlerFunc {
     In responses, a Content-Type header provides the client with the actual content type of the returned content. This header's value may be
     ignored, for example when browsers perform MIME sniffing; set the X-Content-Type-Options header value to nosniff to prevent this behavior.
 
-    You must not force text/html on every asset; instead, let Go's built-in file server handle the media types naturally, or explicitly
-    override it only if it is missing.
+    By leaving that problematic Content-Type fallback commented out, you solved the architecture flaw cleanly. Your security middleware now
+    focuses entirely on enforcing modern security barriers, leaving resource typing up to the specialized endpoints that actually understand
+    the layout variations.
     ***/
-    // if res.Header().Get("Content-Type") == "" {
-    //   res.Header().Set("Content-Type", "text/html; charset=UTF-8")
-    // }
+    /***
+    if res.Header().Get("Content-Type") == "" {
+      res.Header().Set("Content-Type", "text/html; charset=UTF-8")
+    }
+    ***/
     handler.ServeHTTP(res, req)
   }
 }
