@@ -83,9 +83,9 @@ func SecurityHeaders(handler http.HandlerFunc) http.HandlerFunc {
     You must not force text/html on every asset; instead, let Go's built-in file server handle the media types naturally, or explicitly
     override it only if it is missing.
     ***/
-    if res.Header().Get("Content-Type") == "" {
-      res.Header().Set("Content-Type", "text/html; charset=UTF-8")
-    }
+    // if res.Header().Get("Content-Type") == "" {
+    //   res.Header().Set("Content-Type", "text/html; charset=UTF-8")
+    // }
     handler.ServeHTTP(res, req)
   }
 }
