@@ -4,7 +4,7 @@ import (
   "context"
   "net/http"
   // Importing the sessions package with alias "sess"
-  sess "github.com/juan-carlos-trimino/gpsessions"
+  sess "github.com/juan-carlos-trimino/go-sessions"
 )
 
 // Protect private pages.
