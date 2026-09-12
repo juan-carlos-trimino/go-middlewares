@@ -11,7 +11,7 @@
 //The default name for the generated executable would be:
 module github.com/juan-carlos-trimino/go-middlewares
 
-go 1.24.3
+go 1.26.4
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
