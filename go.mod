@@ -16,10 +16,7 @@ go 1.26.4
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
+	github.com/juan-carlos-trimino/go-sessions v1.0.3
 )
 
-require (
-	github.com/juan-carlos-trimino/go-sessions v1.0.3 // indirect
-	github.com/juan-carlos-trimino/gposu v1.0.1 // indirect
-	golang.org/x/crypto v0.57.0 // indirect
-)
+require golang.org/x/crypto v0.57.0 // indirect
