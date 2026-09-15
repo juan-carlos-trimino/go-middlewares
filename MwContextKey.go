@@ -12,10 +12,12 @@ type ctxKey string
 The correlationIdKey constant is unexported. Hence, there's no risk that another package using the same context could override the value
 that is already set. Even if another package creates the same correlationIdKey based on a ctxKey type as well, it will be a different key.
 ***/
-const correlationIdKey ctxKey = "correlationIdKey"
-const sessionTokenKey ctxKey = "sessionTokenKey"
-const startTimeKey ctxKey = "startTimeKey"
-const adminVerificationKey ctxKey = "adminVerificationKey"
+const (
+  correlationIdKey ctxKey = "correlationIdKey"
+  sessionTokenKey ctxKey = "sessionTokenKey"
+  startTimeKey ctxKey = "startTimeKey"
+  adminVerificationKey ctxKey = "adminVerificationKey"
+)
 
 type MwContextKey struct{}
 
