@@ -39,7 +39,7 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
 
 
 
-// Protect private pages.
+//Protect private pages.
 func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
   return func(res http.ResponseWriter, req *http.Request) {
     cookie, err := req.Cookie("session_token")
@@ -49,17 +49,6 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
       return
     }
     oldToken := cookie.Value
-
-    //BYPASS ROLLING FOR LOGOUT ROUTE
-    if req.URL.Path == "/logout" {
-      // Put the raw incoming token into the context so LogoutPage can read it directly
-      ctx := context.WithValue(req.Context(), sessionTokenKey, oldToken)
-      handler.ServeHTTP(res, req.WithContext(ctx))
-      return
-    }
-
-
-
     if exists := sess.SessionExists(oldToken); !exists {  //Validate session existence.
       ctx := context.WithValue(req.Context(), sessionTokenKey, "")
       handler.ServeHTTP(res, req.WithContext(ctx))
