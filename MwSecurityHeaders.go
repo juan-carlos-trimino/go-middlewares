@@ -9,11 +9,11 @@ import (
 The Content-Security-Policy HTTP response header field is the preferred mechanism for delivering a policy from a server to a client.
 
 Send HTTP HEAD request with curl:
-$ curl --verbose -I http://localhost:8080
-$ curl --verbose -k -I https://localhost:8443
-$ curl --verbose --insecure -I https://localhost:8443
-$ curl --verbose --head http://localhost:8080
-$ curl --verbose -k --head https://localhost:8443
+curl --verbose -I http://localhost:8080
+curl --verbose -k -I https://localhost:8443
+curl --verbose --insecure -I https://localhost:8443
+curl --verbose --head http://localhost:8080
+curl --verbose -k --head https://localhost:8443
 ***/
 func SecurityHeaders(handler http.HandlerFunc) http.HandlerFunc {
   return func(res http.ResponseWriter, req *http.Request) {
