@@ -10,6 +10,8 @@ github.com/juan-carlos-trimino/go-sessions v1.0.15 h1:2RlFVDYk5mnD+4go8sxTL17vxR
 github.com/juan-carlos-trimino/go-sessions v1.0.15/go.mod h1:OiKSRDiwWM9J94Urm5kzmW2zTL0ACSDhEjEI0/4zdcs=
 github.com/juan-carlos-trimino/go-sessions v1.0.17-0.20260922210350-097ef01b6d81 h1:nO/An+6896Qs43lGgNWMvjCW2RqCK0O3LzlmUUn/HoI=
 github.com/juan-carlos-trimino/go-sessions v1.0.17-0.20260922210350-097ef01b6d81/go.mod h1:I1L8dh9cN4ZyguggOSn546ybgdHbO2dkxVi3yQzB2Z8=
+github.com/juan-carlos-trimino/go-sessions v1.0.17-0.20260923015105-2f3e0b876650 h1:xcoJetoWB2zz64yek+FM6ODtw5qG1cbKz4s/1Tj0eDg=
+github.com/juan-carlos-trimino/go-sessions v1.0.17-0.20260923015105-2f3e0b876650/go.mod h1:I1L8dh9cN4ZyguggOSn546ybgdHbO2dkxVi3yQzB2Z8=
 github.com/redis/go-redis/v9 v9.22.0 h1:laDvpYXTJtZLloinw1fA5Kqd6HAEH2XKxOkG/PDq2F0=
 github.com/redis/go-redis/v9 v9.22.0/go.mod h1:y2g0Wj8rQvuK0ELM+oxSudcLtC09JScs98I/X9gRWY4=
 go.uber.org/atomic v1.12.0 h1:BvcXdFKuviU4fTL/f+SxdQ5qJX/Jix8pAkgdUcb3XOE=
