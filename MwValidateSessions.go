@@ -57,16 +57,16 @@ func xValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
 
 func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
   return func(res http.ResponseWriter, req *http.Request) {
-    //Validate HTTP Method.
+    //** 1. Validate HTTP Method. **
     if req.Method != http.MethodPost && req.Method != http.MethodGet {
       // http.Error(res, "Method not allowed", http.StatusMethodNotAllowed)
       http.Redirect(res, req, "/login", http.StatusSeeOther)
       return
     }
+    //** 2. Bypass rules: Exclude public paths and the login/welcome endpoints from the session validation logic. **
     //Normalize the URL path to lowercase to safely bypass any case quirks.
     lowerPath := strings.ToLower(req.URL.Path)
-    //Exclude public paths and the login/welcome endpoints from the session validation logic.
-    //Check for exact matching static pages.
+    //Check for exact matching.
     if lowerPath == "/" || lowerPath == "/login" {
       handler.ServeHTTP(res, req)
       return
@@ -81,28 +81,35 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
       }
       return
     }
-    //Dynamic Asset Bypass: Allow ALL files inside the /public/ folder.
+    //Allow ALL files inside the /public/ folder.
     if strings.HasPrefix(lowerPath, "/public/") {
       handler.ServeHTTP(res, req)
       return
     }
-    //Extract cookie (assuming it contains: "uuid|timestamp").
+    //** 3. Extract cookie (assuming it contains: "uuid|timestamp"). **
     cookie, err := req.Cookie("session_token")
     if err != nil {
-      // http.Error(res, "Unauthorized", http.StatusUnauthorized)
-      http.Redirect(res, req, "/login", http.StatusSeeOther)
+      //Unauthorized.
+      http.Redirect(res, req, "/login", http.StatusSeeOther)  //No cookie found.
       return
     }
     parts := strings.Split(cookie.Value, "|")
     if len(parts) != 2 {
-      // http.Error(res, "Invalid cookie format", http.StatusBadRequest)
+      //Malformed or tampered cookie layout? Route to login page immediately.
+      //Invalid cookie format
+      cookie.MaxAge = -1  //Instruct the browser to delete immediately.
+      http.SetCookie(res, cookie)
       http.Redirect(res, req, "/login", http.StatusSeeOther)
       return
     }
     sessionId := parts[0]
     expiryUnix, err := strconv.ParseInt(parts[1], 10 /*base*/, 64 /*int64*/)
     if err != nil {
-      // http.Error(res, "Invalid expiry format", http.StatusBadRequest)
+      sess.DelRedis(req.Context(), sessionId)
+      //Continue with or without error to ensure the client-side cookie is deleted.
+      //Invalid expiry format.
+      cookie.MaxAge = -1  //Instruct the browser to delete immediately.
+      http.SetCookie(res, cookie)
       http.Redirect(res, req, "/login", http.StatusSeeOther)
       return
     }
@@ -110,48 +117,48 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
     expiresAt := time.Unix(expiryUnix, 0)
     //Calculate remaining lifetime left on this cookie.
     timeLeft := time.Until(expiresAt)
-    timeCfg := sess.GetSessionConfig()
-
+    //** 4. Local Check: Has the client-side cookie expired? **
     /***
     To test if a session has expired inside your middleware, you must perform two checks: a local timestamp validation (reading
     the cookie value) followed by a database validation (checking Redis).
-
-    Local Client-Side Expiration Test (Fast & Free).
     ***/
-    if time.Now().After(expiresAt) {
-      // The cookie's timestamp has passed the current time!
-      // http.Error(res, "Session expired", http.StatusUnauthorized)
+    if time.Now().After(expiresAt) {  //Local Client-Side Expiration Test (Fast & Free).
+      /***
+      If you confirm a session has expired based on the cookie value, you should call Redis to delete that entry.
+
+      Why you should call Redis to delete the entry
+      1. Preventing Session Replay Attacks: Cookies can be copied or intercepted. If an attacker managed to steal that session
+         cookie before it expired, and your middleware only checks the time metadata on the cookie, the attacker could manipulate
+         their local cookie to alter the expiration timestamp. If you don't check and explicitly evict that session token
+         identifier from Redis, the server-side session remains valid and open to hijacking.
+      2. Preventing Stale Data Accrual: If your Redis keys do not have a built-in TTL (Time-To-Live) expiration set up when
+         created via SETEX or EXPIRE, skipping the delete call means that expired session will sit in your Redis database
+         memory forever.
+      ***/
+      sess.DelRedis(req.Context(), sessionId)
+      //Continue with or without error to ensure the client-side cookie is deleted.
+      //Session expired.
+      cookie.MaxAge = -1  //Instruct the browser to delete immediately.
+      http.SetCookie(res, cookie)
       http.Redirect(res, req, "/login", http.StatusSeeOther)
       return
     }
-
-
-    //Remote Server-Side Expiration Test (Secure).
-    _, ret := sess.Redis_db.GetRedis(req.Context(), sessionId)
-    if ret == 1 {
-      http.Error(res, "Unauthorized", http.StatusUnauthorized)
-      return
-    } else if ret == 2 {
-      //Something went wrong communicating with Redis.
-      http.Error(res, "Internal server error", http.StatusInternalServerError)
-      return
-    }
-
-
-        // 5. Database Check: Does the token still actively reside inside Redis?
-    _, err = redis_db.Get(r.Context(), sessionId).Result()
+    //** 5. Database Check: Does the token still actively reside inside Redis? **
+    _, err = sess.GetRedis(req.Context(), sessionId)  //Remote Server-Side Expiration Test (Secure).
     if err != nil {
-      // Redis returned redis.Nil (expired out) or database down
-      // Clear the invalid browser cookie so it doesn't loop, then redirect
-      clearCookie := &http.Cookie{Name: "session", Path: "/", MaxAge: -1}
-      http.SetCookie(w, clearCookie)
-
-      http.Redirect(w, r, "/login", http.StatusSeeOther)
+      /***
+      Redis returned redis.Nil (expired) or database down.
+      Send back a cookie with MaxAge = -1 and an expired timestamp. This instructs the browser to immediately delete
+      the cookie from disk.
+      ***/
+      cookie.MaxAge = -1  //Instruct the browser to delete immediately.
+      http.SetCookie(res, cookie)
+      http.Redirect(res, req, "/login", http.StatusSeeOther)
       return
     }
-
-
-
+    //** 6. Fetch the thread-safe synchronized timing configuration. **
+    timeCfg := sess.GetSessionTimeoutConfig()
+    //** 7. Rolling Refresh: If safe, verify if we crossed the threshold limit. **
     /***
     To implement an "automatic rolling session refresh," you check how much time has passed since the session started. If the time
     remaining falls below your Threshold, you generate a new cookie and reset the TTL in Redis.
@@ -161,18 +168,30 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
     ***/
     if timeLeft < timeCfg.Threshold {  //If remaining time is less than the threshold.
       //If the user is active, reset the countdown clock back to the session timeout.
-      err := sess.Redis_db.Expire(req.Context(), sessionId, timeCfg.Timeout)
-      if err != nil {
+      ok, err := sess.ExpireRedis(req.Context(), sessionId, timeCfg.Timeout)
+      if err != nil || !ok {
+        sess.DelRedis(req.Context(), sessionId)
+        //Continue with or without error to ensure the client-side cookie is deleted.
+        /***
+        If you pull the cookie directly out of the request via req.Cookie(name), change only its MaxAge field to -1, and pass
+        it back to http.SetCookie, it will work perfectly because the Name and Path are already inherently correct.
+        ***/
+        cookie.MaxAge = -1  //Instruct the browser to delete immediately.
+        http.SetCookie(res, cookie)
         //If session missing or Redis down, fail safely.
-        // http.Error(res, "Internal server error", http.StatusInternalServerError)
         http.Redirect(res, req, "/login", http.StatusSeeOther)
         return
       }
-      //Update browser cookie with a fresh future timestamp.
-      sessionExpiresAt := time.Now().Add(timeCfg.Timeout)
-      cookieValue := fmt.Sprintf("%s|%d", sessionId, sessionExpiresAt.Unix())
-      cookie = sess.CreateCookie(cookieValue)
+      /***
+      Since the cookie name remains exactly the same and only the value changes, you do not need to send a separate deletion
+      cookie at all.
+
+      When you create the new cookie with the updated value and send it via http.SetCookie, the browser matches it up by its
+      Name and Path. It will instantly overwrite the old value on disk with your new value.
+      ***/
       //Update the Cookie expiration to match Redis.
+      sessionExpiresAt := time.Now().Add(timeCfg.Timeout)
+      cookie.Value = fmt.Sprintf("%s|%d", sessionId, sessionExpiresAt.Unix())
       cookie.MaxAge = int(timeCfg.Timeout.Seconds())
       cookie.Expires = sessionExpiresAt
       //Write updated cookie back to the browser.
