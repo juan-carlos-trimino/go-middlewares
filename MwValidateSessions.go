@@ -227,7 +227,7 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
         return  //Triggers defer -> invalidSession() sets cookie -> http.Error writes headers.
       }
       //Decode the incoming browser token back to original raw bytes.
-      rawIncomingBytes, err := base64.URLEncoding.DecodeString(incomingCSRF)
+      rawIncomingBytes, err := base64.StdEncoding.DecodeString(incomingCSRF)
       if err != nil {
         errMessage = "Forbidden: Malformed CSRF Token Encoding"
         errCode = http.StatusForbidden
