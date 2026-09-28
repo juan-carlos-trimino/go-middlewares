@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-  "context"
   //The option -u instructs 'get' to update the module with dependencies.
   //go get -u github.com/google/uuid
   "github.com/google/uuid"
@@ -16,9 +15,11 @@ func CorrelationId(handler http.HandlerFunc) http.HandlerFunc {
       //The header is not present in the request, generate a new unique id.
       cId = uuid.New().String()
     }
-    //Creating a new context from a parent context.
-    ctx := context.WithValue(req.Context(), correlationIdKey, cId)
-    ctx = context.WithValue(ctx, startTimeKey, time.Now())
+    //Instantiate the context helper.
+    ck := MwContextKey{}
+    //Create the new context from the parent using the setter.
+    ctx := ck.WithCorrelationId(req.Context(), cId)
+    ctx = ck.WithStartTime(ctx, time.Now())
     //Add the correlation id to the response header.
     res.Header().Set("X-Correlation-Id", cId)
     //Calling the handler with the new context.

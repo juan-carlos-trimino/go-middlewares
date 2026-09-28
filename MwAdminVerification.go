@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-  "context"
   "fmt"
   //Run this command in your terminal to install the standard JWT library for Go:
   // $ go get -u github.com/golang-jwt/jwt/v5
@@ -39,8 +38,9 @@ func AdminVerification(handler http.HandlerFunc) http.HandlerFunc {
       http.Error(res, fmt.Sprintf("Error %d: Admins only.", http.StatusForbidden), http.StatusForbidden)
       return
     }
-    //Creating a new context from a parent context.
-    ctx := context.WithValue(req.Context(), adminVerificationKey, isAdmin)
+    //Instantiate the context helper.
+    ck := MwContextKey{}
+    ctx := ck.WithAdminVerification(req.Context(), isAdmin)
     //Calling the handler with the new context.
     handler.ServeHTTP(res, req.WithContext(ctx))
   }

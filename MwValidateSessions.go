@@ -27,9 +27,15 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
     //Normalize the URL path to lowercase to safely bypass any case quirks.
     lowerPath := strings.ToLower(req.URL.Path)
     //Check for exact matching.
-    if lowerPath == "/" || lowerPath == "/login" {
+    switch lowerPath {
+    case "/", "/login", //"/logout", "/welcome",
+  //       "/finances",
+   //      "/banking", //"/banking/manageaccounts",
+         "/favicon.ico":
       handler.ServeHTTP(res, req)
       return
+    default:
+      break
     }
     //
     if lowerPath == "/verify_login" {
@@ -108,7 +114,7 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
     }
     //** 5. Database Check: Does the token still actively reside inside Redis? **
     //Remote Server-Side Expiration Test (Secure).
-    jsonBytes, err := sess.GetRedis(req.Context(), sessionId)
+    jsonBytes, err := sess.GetRedis(req.Context(), "session:" + sessionId)
     if err != nil {
       cookie.Value = ""  //Zero out the value for safety.
       cookie.MaxAge = -1  //Instruct the browser to delete immediately.
@@ -243,7 +249,9 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
       //If code execution reaches this point, the request is valid!
       isValid = true
     }
+    ck := MwContextKey{}
+    ctx := ck.WithSessionInfo(req.Context(), sessionInfo)
     //Proceed to handler without executing a single Redis call if time left > session timeout.
-    handler.ServeHTTP(res, req)
+    handler.ServeHTTP(res, req.WithContext(ctx))
   }
 }
