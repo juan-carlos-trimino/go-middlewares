@@ -28,24 +28,20 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
     lowerPath := strings.ToLower(req.URL.Path)
     //Check for exact matching.
     switch lowerPath {
-    case "/", "/login", //"/logout", "/welcome",
-  //       "/finances",
-   //      "/banking", //"/banking/manageaccounts",
+    case "/",
+         "/login",
          "/favicon.ico":
       handler.ServeHTTP(res, req)
       return
-    default:
-      break
-    }
-    //
-    if lowerPath == "/verify_login" {
+    case "/verify_login":
       if req.Method == http.MethodPost {
         handler.ServeHTTP(res, req)
       } else {
-        // http.Error(res, "Method not allowed", http.StatusMethodNotAllowed)
         http.Redirect(res, req, "/login", http.StatusSeeOther)
       }
       return
+    default:
+      break
     }
     //Allow ALL files inside the /public/ folder.
     if strings.HasPrefix(lowerPath, "/public/") {
