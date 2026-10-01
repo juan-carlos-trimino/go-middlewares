@@ -1,13 +1,12 @@
 package middlewares
 
 import (
+  "context"
   "crypto/subtle"
   "encoding/base64"
   "encoding/json"
   "errors"
-  "fmt"
   "net/http"
-  "strconv"
   "strings"
   "time"
   //Importing the sessions package with alias "sess".
@@ -55,26 +54,14 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
       http.Redirect(res, req, "/login", http.StatusSeeOther)  //No cookie found.
       return
     }
-    parts := strings.Split(cookie.Value, "|")
-    if len(parts) != 2 {
-      //Malformed or tampered cookie layout? Route to login page immediately.
-      //Invalid cookie format.
-      cookie.Value = ""  //Zero out the value for safety.
-      cookie.MaxAge = -1  //Instruct the browser to delete immediately.
-      http.SetCookie(res, cookie)
-      http.Redirect(res, req, "/login", http.StatusSeeOther)
-      return
-    }
-    sessionId := parts[0]
-    expiryUnix, err := strconv.ParseInt(parts[1], 10 /*base*/, 64 /*int64*/)
+    sessionId, expiryUnix, err := sess.VerifyAndSplitCookie(cookie.Value)
     if err != nil {
-      sess.DelRedis(req.Context(), sessionId)
-      //Continue with or without error to ensure the client-side cookie is deleted.
-      //Invalid expiry format.
-      cookie.Value = ""  //Zero out the value for safety.
-      cookie.MaxAge = -1  //Instruct the browser to delete immediately.
-      http.SetCookie(res, cookie)
-      http.Redirect(res, req, "/login", http.StatusSeeOther)
+      /***
+      If a malicious actor alters a cookie or sends a completely broken string (like session_token=garbage), VerifyAndSplitCookie returns an error, meaning sessionId will be an empty string "". Your code then attempts to call sess.DelRedis(context.Background(), "session:"). This means you will execute a delete operation on your namespace root or pass a malformed key to Redis.
+
+      Since a bad signature means the cookie cannot be trusted or identified, do not try to wipe a session out of Redis. Skip DelRedis entirely here and just call invalidSession to drop the bad client-side cookie file.
+      ***/
+      invalidSession(res, req, false)
       return
     }
     //Convert timestamp and compute how much time is left.
@@ -99,41 +86,98 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
          created via SETEX or EXPIRE, skipping the delete call means that expired session will sit in your Redis database
          memory forever.
       ***/
-      sess.DelRedis(req.Context(), sessionId)
+      sess.DelRedis(context.Background(), "session:" + sessionId)
       //Continue with or without error to ensure the client-side cookie is deleted.
       //Session expired.
-      cookie.Value = ""  //Zero out the value for safety.
-      cookie.MaxAge = -1  //Instruct the browser to delete immediately.
-      http.SetCookie(res, cookie)
-      http.Redirect(res, req, "/login", http.StatusSeeOther)
+      invalidSession(res, req, false)
       return
     }
     //** 5. Database Check: Does the token still actively reside inside Redis? **
     //Remote Server-Side Expiration Test (Secure).
     jsonBytes, err := sess.GetRedis(req.Context(), "session:" + sessionId)
     if err != nil {
-      cookie.Value = ""  //Zero out the value for safety.
-      cookie.MaxAge = -1  //Instruct the browser to delete immediately.
-      http.SetCookie(res, cookie)
       if errors.Is(err, sess.ErrKeyNotFound) {
-        http.Redirect(res, req, "/login", http.StatusSeeOther)
+        invalidSession(res, req, false)
         return
       }
+      sess.DelRedis(context.Background(), "session:" + sessionId)
+      //Cannot delete the entry for "user:data:" since we do not have the username!!!
       //Handle unexpected database system crashes (500).
-      http.Error(res, "Internal Server Error", http.StatusInternalServerError)
+      invalidSession(res, req, true)
       return
     }
     var sessionInfo sess.SessionInfo
     if err := json.Unmarshal(jsonBytes, &sessionInfo); err != nil {
-      sess.DelRedis(req.Context(), sessionId)
-      cookie.Value = ""  //Zero out the value for safety.
-      cookie.MaxAge = -1  //Instruct the browser to delete immediately.
-      http.SetCookie(res, cookie)
-      http.Error(res, "Internal Server Error", http.StatusInternalServerError)
+      sess.DelRedis(context.Background(), "session:" + sessionId)
+      //Cannot delete the entry for "user:data:" since we do not have the username!!!
+      invalidSession(res, req, true)
+      return
     }
-    //** 6. Fetch the thread-safe synchronized timing configuration. **
-    timeCfg := sess.GetSessionTimeoutConfig()
+    //** 6. Validate CSRF for POST requests. **
+    /***
+    By validating the CSRF token before executing the rolling refresh, we have closed a subtle loophole. Attackers can no longer
+    force the Redis database to spend resources updating session TTLs using invalid requests.
+    ***/
+    if req.Method == http.MethodPost {
+      /***
+      In Go, closures capture outer variables by reference, not by value. This means the unnamed function is not looking at a
+      snapshot or copy of the variable -- it is looking at the exact same memory location as the outer function.
+
+      Because it shares the exact same variable, any changes made to that variable outside the function will be seen inside the
+      function, and vice versa.
+      ***/
+      //Define a reusable cleanup routine to clear state on failure.
+      failRequest := func(message string, code int) {  //Lambda.
+        /***
+        In Go's standard http server framework, once a handler completes or returns (which triggers the defer), the underlying
+        network context tracking req.Context() begins teardown optimization. If your Redis driver processes the DelRedis request
+        asynchronously or right at the edge of the context cancellation pool, the database command might fail silently due to a
+        context.Canceled or context.DeadlineExceeded error.
+
+        To resolve the network context teardown issue, we swap req.Context() with context.Background() only inside terminal
+        execution flows (like defer blocks, explicit logouts, or sudden errors where execution must complete regardless of
+        whether the client dropped the HTTP connection).
+        ***/
+        //Instantly delete the key from Redis using your namespace pattern.
+        sess.DelRedis(context.Background(), "session:" + sessionId)
+        sess.DelRedis(context.Background(), "user:data:" + sessionInfo.UserName)
+        //Clear the browser cookie by setting MaxAge to -1.
+        http.SetCookie(res, sess.CreateCookie("session_token", ""))
+        http.Error(res, message, code)  //Safely write headers and response body.
+      }
+      //Parse the incoming form payload.
+      if err := req.ParseForm(); err != nil {
+        failRequest("Bad Request: Failed to parse form", http.StatusBadRequest)
+        return
+      }
+      //Read the token directly from the hidden form body element.
+      incomingCSRF := req.PostFormValue("csrf_token")
+      //Quick sanity check for missing tokens.
+      if incomingCSRF == "" {
+        failRequest("Forbidden: CSRF Token Missing", http.StatusForbidden)
+        return
+      }
+      //Decode the incoming browser token back to original raw bytes.
+      rawIncomingBytes, err := base64.StdEncoding.DecodeString(incomingCSRF)
+      if err != nil {
+        failRequest("Forbidden: Malformed CSRF Token Encoding", http.StatusForbidden)
+        return
+      }
+      //Decode the stored token out of your Redis session struct back to original raw bytes.
+      rawStoredBytes, err := base64.StdEncoding.DecodeString(sessionInfo.CSRFToken)
+      if err != nil {
+        failRequest("Internal Server Error", http.StatusInternalServerError)
+        return
+      }
+      //Perform a constant-time comparison on the raw cryptographic messages.
+      if subtle.ConstantTimeCompare(rawIncomingBytes, rawStoredBytes) != 1 {
+        failRequest("Forbidden: CSRF Token Invalid", http.StatusForbidden)
+        return
+      }
+    }
     //** 7. Rolling Refresh: If safe, verify if we crossed the threshold limit. **
+    //Fetch the thread-safe synchronized timing configuration.
+    timeCfg := sess.GetSessionTimeoutConfig()
     /***
     To implement an "automatic rolling session refresh," you check how much time has passed since the session started. If the time
     remaining falls below your Threshold, you generate a new cookie and reset the TTL in Redis.
@@ -143,24 +187,21 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
     ***/
     if timeLeft < timeCfg.Threshold {  //If remaining time is less than the threshold.
       //If the user is active, reset the countdown clock back to the session timeout.
-      ok, err := sess.ExpireRedis(req.Context(), sessionId, timeCfg.Timeout)
-      if err != nil {
-        /***
-        If you pull the cookie directly out of the request via req.Cookie(name), change only its MaxAge field to -1, and pass
-        it back to http.SetCookie, it will work perfectly because the Name and Path are already inherently correct.
-        ***/
-        cookie.Value = ""  //Zero out the value for safety.
-        cookie.MaxAge = -1  //Instruct the browser to delete immediately.
-        http.SetCookie(res, cookie)
-        http.Error(res, "Internal Server Error", http.StatusInternalServerError)
-        return
-      } else if !ok {
-        cookie.Value = ""  //Zero out the value for safety.
-        cookie.MaxAge = -1  //Instruct the browser to delete immediately.
-        http.SetCookie(res, cookie)
-        http.Redirect(res, req, "/login", http.StatusSeeOther)
+      //Enforce strict validation on the critical session key
+      ok, err := sess.ExpireRedis(req.Context(), "session:" + sessionId, timeCfg.Timeout)
+      if err != nil || !ok {
+        sess.DelRedis(context.Background(), "user:data:" + sessionInfo.UserName)
+        invalidSession(res, req, err != nil)
         return
       }
+      /***
+      If the user data cache expired or vanished from Redis memory, but the session key itself is still valid, the safest and
+      most seamless user experience is to let the request pass through, and simply let the downstream endpoints re-fetch that
+      data from PostgreSQL as needed.
+      ***/
+      //Attempt to extend user data cache. If it fails or is missing, log it but don't disrupt the user; downstream handlers
+      //can re-populate it.
+      _, _ = sess.ExpireRedis(req.Context(), "user:data:" + sessionInfo.UserName, timeCfg.Timeout)
       /***
       Since the cookie name remains exactly the same and only the value changes, you do not need to send a separate deletion
       cookie at all.
@@ -170,84 +211,61 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
       ***/
       //Update the Cookie expiration to match Redis.
       sessionExpiresAt := time.Now().Add(timeCfg.Timeout)
-      cookie.Value = fmt.Sprintf("%s|%d", sessionId, sessionExpiresAt.Unix())
-      cookie.MaxAge = int(timeCfg.Timeout.Seconds())
-      cookie.Expires = sessionExpiresAt
+      //Convert "uuid|timestamp" into "uuid|timestamp|signature".
+      newCookie := sess.CreateCookie("session_token", sess.SignCookieValue(sessionId, sessionExpiresAt.Unix()))
+      newCookie.MaxAge = int(timeCfg.Timeout.Seconds())
+      newCookie.Expires = sessionExpiresAt
       //Write updated cookie back to the browser.
-      http.SetCookie(res, cookie)
-    }
-    //Validate CSRF for POST requests.
-    if req.Method == http.MethodPost {
-      var (
-        isValid = false  //A tracker flag to determine if validation succeeded.
-        errMessage string
-        errCode int
-      )
+      http.SetCookie(res, newCookie)
       /***
-      In Go, closures capture outer variables by reference, not by value. This means the unnamed function is not looking at a
-      snapshot or copy of the variable -- it is looking at the exact same memory location as the outer function.
+      Match the Lifetimes Exactly
+      If the ValidateSessions middleware is responsible for refreshing the primary cookie, we should have it refresh the Admin
+      JWT at the exact same time. For this to work smoothly without complex multi-cookie tracking, make their raw lifespans match:
+      * Session Timeout: 30 minutes
+      * JWT Expiration (exp): 30 minutes
+      When the primary session crosses the threshold, we will check if an admin_token cookie is present. If it is, we will decode
+      it to check if it is an admin, generate a brand new JWT token with an extended 30-minute expiration, and attach it to the
+      headers right alongside the fresh primary session cookie.
 
-      Because it shares the exact same variable, any changes made to that variable outside the function will be seen inside the
-      function, and vice versa.
+      Why this approach keeps the app stable and secure:
+      * Zero Ghost Lockouts: Because both cookies extend their lifespans simultaneously during active page navigation, a user working
+        continuously will never have their JWT drop out from underneath him.
+      * Safe Isolation: We gracefully ignore parsing failures or missing cookies during the refresh step. If a standard user doesn't
+        have an admin_token, the block safely skips the JWT generation and continues refreshing its standard session seamlessly.
+      * Maintained Integrity: By decoding the current token via the existing secure ValidateJwtToken method first, we ensure that we
+        only extend privileges for a user who actually holds a fully valid, untampered admin credential.
       ***/
-      //Define a reusable cleanup routine to clear state on failure.
-      invalidSession := func() {  //Lambda.
-        //Instantly delete the key from Redis using your namespace pattern.
-        sess.DelRedis(req.Context(), "session:" + sessionId)
-        //Clear the browser cookie by setting MaxAge to -1.
-        cookie.Value = ""  //Zero out the value for safety.
-        cookie.MaxAge = -1
-        http.SetCookie(res, cookie)
-      }
-      //Ensure cleanup executes automatically if a failure triggers a premature return.
-      defer func() {
-        if !isValid {
-          //Call the cleanup routine which sets the cookie first.
-          invalidSession()
-          //Now that the cookie is safely attached to the headers, write the HTTP error code.
-          http.Error(res, errMessage, errCode)
+      //Synchronize the Admin JWT Cookie if it exists.
+      if adminCookie, err := req.Cookie("admin_token"); err == nil && adminCookie.Value != "" {
+        //Parse the existing token just to securely verify its current admin status.
+        if claims, err := sess.ValidateJwtToken(adminCookie.Value); err == nil {
+          if isAdmin, ok := claims["is_admin"].(bool); ok && isAdmin {
+            //Generate a fresh JWT string extending its lifetime by another x minutes
+            newJwt, err := sess.GenerateJwtToken(true)
+            if err == nil {
+              //Build and attach the fresh active admin cookie mirroring the active parameters.
+              newAdminCookie := sess.CreateCookie("admin_token", newJwt)
+              sessionExpiresAt = time.Now().Add(timeCfg.Timeout)
+              newAdminCookie.MaxAge = int(timeCfg.Timeout.Seconds())
+              newAdminCookie.Expires = sessionExpiresAt
+              http.SetCookie(res, newAdminCookie)
+            }
+          }
         }
-      }()
-      //Parse the incoming form payload.
-      if err := req.ParseForm(); err != nil {
-        errMessage = "Bad Request: Failed to parse form"
-        errCode = http.StatusBadRequest
-        return  //Triggers defer -> invalidSession() sets cookie -> http.Error writes headers.
       }
-      //Read the token directly from the hidden form body element.
-      incomingCSRF := req.PostFormValue("csrf_token")
-      //Quick sanity check for missing tokens.
-      if incomingCSRF == "" {
-        errMessage = "Forbidden: CSRF Token Missing"
-        errCode = http.StatusForbidden
-        return  //Triggers defer -> invalidSession() sets cookie -> http.Error writes headers.
-      }
-      //Decode the incoming browser token back to original raw bytes.
-      rawIncomingBytes, err := base64.StdEncoding.DecodeString(incomingCSRF)
-      if err != nil {
-        errMessage = "Forbidden: Malformed CSRF Token Encoding"
-        errCode = http.StatusForbidden
-        return  //Triggers defer -> invalidSession() sets cookie -> http.Error writes headers.
-      }
-      //Decode the stored token out of your Redis session struct back to original raw bytes.
-      rawStoredBytes, err := base64.StdEncoding.DecodeString(sessionInfo.CSRFToken)
-      if err != nil {
-        errMessage = "Internal Server Error"
-        errCode = http.StatusInternalServerError
-        return  //Triggers defer -> invalidSession() sets cookie -> http.Error writes headers.
-      }
-      //Perform a constant-time comparison on the raw cryptographic messages.
-      if subtle.ConstantTimeCompare(rawIncomingBytes, rawStoredBytes) != 1 {
-        errMessage = "Forbidden: CSRF Token Invalid"
-        errCode = http.StatusForbidden
-        return  //Triggers defer -> invalidSession() sets cookie -> http.Error writes headers.
-      }
-      //If code execution reaches this point, the request is valid!
-      isValid = true
     }
     ck := MwContextKey{}
     ctx := ck.WithSessionInfo(req.Context(), sessionInfo)
     //Proceed to handler without executing a single Redis call if time left > session timeout.
     handler.ServeHTTP(res, req.WithContext(ctx))
+  }
+}
+
+func invalidSession(res http.ResponseWriter, req *http.Request, isError bool) {
+  http.SetCookie(res, sess.CreateCookie("session_token", ""))
+  if isError {
+    http.Error(res, "Internal Server Error", http.StatusInternalServerError)
+  } else {
+    http.Redirect(res, req, "/login", http.StatusSeeOther)
   }
 }

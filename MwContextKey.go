@@ -2,7 +2,6 @@ package middlewares
 
 import (
   "context"
-  "time"
   //Importing the sessions package with alias "sess".
   sess "github.com/juan-carlos-trimino/go-sessions"
 )
@@ -17,8 +16,7 @@ that is already set. Even if another package creates the same correlationIdKey b
 const (
   correlationIdKey ctxKey = iota  //0
   sessionInfoKey  //1
-  startTimeKey  //2
-  adminVerificationKey  //3
+  adminVerificationKey  //2
 )
 
 //The public MwContextKey struct provides type-safe accessors for the rest of the application.
@@ -46,17 +44,6 @@ func (ck MwContextKey) WithSessionInfo(ctx context.Context, info sess.SessionInf
 func (ck MwContextKey) GetSessionInfo(ctx context.Context) (info sess.SessionInfo, ok bool) {
   //A type assertion is an operation applied to an interface value.
   info, ok = ctx.Value(sessionInfoKey).(sess.SessionInfo)
-  return
-}
-
-// --- Start Time ---
-func (ck MwContextKey) WithStartTime(ctx context.Context, startTime time.Time) context.Context {
-  return context.WithValue(ctx, startTimeKey, startTime)
-}
-
-func (ck MwContextKey) GetStartTime(ctx context.Context) (startTime time.Time, ok bool) {
-  //A type assertion is an operation applied to an interface value.
-  startTime, ok = ctx.Value(startTimeKey).(time.Time)
   return
 }
 

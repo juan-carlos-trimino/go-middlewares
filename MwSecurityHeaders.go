@@ -2,7 +2,6 @@ package middlewares
 
 import (
   "net/http"
-  "strings"
 )
 
 /***
@@ -31,7 +30,7 @@ func SecurityHeaders(handler http.HandlerFunc) http.HandlerFunc {
     https://blog.appcanary.com/2017/http-security-headers.html#hsts.
     max-age = 365 days.
     ***/
-    res.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubdomains; preload")
+    res.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
     /***
     For more information about Content Security Policy (HTTP Security Headers), see
     https://blog.appcanary.com/2017/http-security-headers.html
@@ -53,7 +52,7 @@ func SecurityHeaders(handler http.HandlerFunc) http.HandlerFunc {
     Its use can introduce XSS vulnerabilities in otherwise safe websites. This should not be used unless you need to support older web browsers
     that don't yet support CSP. For an explanation, see https://blog.appcanary.com/2017/http-security-headers.html#x-xss-protection
     ***/
-    res.Header().Set("X-XSS-Protection", "1; mode=block")
+    res.Header().Set("X-XSS-Protection", "0")  //Explicitly disable the old XSS auditor entirely.
     /***
     X-Frame-Options is an HTTP header that allows sites control over how your site may be framed within an iframe. Clickjacking is a practical
     attack that allows malicious sites to trick users into clicking links on your site even though they may appear to not be on your site at
@@ -71,17 +70,17 @@ func SecurityHeaders(handler http.HandlerFunc) http.HandlerFunc {
     Middleware handles logic to check the file extension of the requested URL path. If it detects a JavaScript or CSS route, it can apply the proper
     header before processing the request further.
     ***/
-    path := req.URL.Path
-    if strings.HasSuffix(path, ".js") {
-      res.Header().Set("Content-Type", "text/javascript; charset=UTF-8")
-    } else if strings.HasSuffix(path, ".css") {
-      res.Header().Set("Content-Type", "text/css; charset=UTF-8")
-    } else {
-      //Fallback safely for the standard dynamic template HTML views.
-      if res.Header().Get("Content-Type") == "" {
-        res.Header().Set("Content-Type", "text/html; charset=UTF-8")
-      }
-    }
+    // path := req.URL.Path
+    // if strings.HasSuffix(path, ".js") {
+    //   res.Header().Set("Content-Type", "text/javascript; charset=UTF-8")
+    // } else if strings.HasSuffix(path, ".css") {
+    //   res.Header().Set("Content-Type", "text/css; charset=UTF-8")
+    // } else {
+    //   //Fallback safely for the standard dynamic template HTML views.
+    //   if res.Header().Get("Content-Type") == "" {
+    //     res.Header().Set("Content-Type", "text/html; charset=UTF-8")
+    //   }
+    // }
     /***
     Setting this header will prevent the browser from interpreting files as something else than declared by the content type in the HTTP headers.
     Without this header, browsers can incorrectly detect files as scripts and stylesheets, leading to XSS attacks. For an explanation, see
