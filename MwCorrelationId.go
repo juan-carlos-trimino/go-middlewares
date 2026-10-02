@@ -32,9 +32,15 @@ func CorrelationId(handler http.HandlerFunc) http.HandlerFunc {
     calculates its duration and logs it when it finishes. This eliminates the need to manually add boilerplate logging code inside
     every page handler. Because startTime := time.Now() is executed at the absolute top of the middleware chain, the duration
     calculation captures the entire request journey.
+
+    In Go, closures capture outer variables by reference, not by value. This means the unnamed function is not looking at a
+    snapshot or copy of the variable -- it is looking at the exact same memory location as the outer function.
+
+    Because it shares the exact same variable, any changes made to that variable outside the function will be seen inside the
+    function, and vice versa.
     ***/
     //This executes right as this specific request finishes and leaves the middleware.
-    defer func() {
+    defer func() {  //Lambda.
       //Calculate high-precision millisecond floating points (e.g., 1.45ms)
       duration := float64(time.Since(startTime).Nanoseconds()) / 1e6  //1,000,000 (one million) nanoseconds = 1 millisecond.
       //Log the completed trace information universally.

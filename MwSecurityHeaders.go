@@ -67,21 +67,6 @@ func SecurityHeaders(handler http.HandlerFunc) http.HandlerFunc {
     ***/
     res.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
     /***
-    Middleware handles logic to check the file extension of the requested URL path. If it detects a JavaScript or CSS route, it can apply the proper
-    header before processing the request further.
-    ***/
-    // path := req.URL.Path
-    // if strings.HasSuffix(path, ".js") {
-    //   res.Header().Set("Content-Type", "text/javascript; charset=UTF-8")
-    // } else if strings.HasSuffix(path, ".css") {
-    //   res.Header().Set("Content-Type", "text/css; charset=UTF-8")
-    // } else {
-    //   //Fallback safely for the standard dynamic template HTML views.
-    //   if res.Header().Get("Content-Type") == "" {
-    //     res.Header().Set("Content-Type", "text/html; charset=UTF-8")
-    //   }
-    // }
-    /***
     Setting this header will prevent the browser from interpreting files as something else than declared by the content type in the HTTP headers.
     Without this header, browsers can incorrectly detect files as scripts and stylesheets, leading to XSS attacks. For an explanation, see
     https://blog.appcanary.com/2017/http-security-headers.html#x-content-type-options
