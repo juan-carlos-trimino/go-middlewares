@@ -187,7 +187,7 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
     ***/
     if timeLeft < timeCfg.Threshold {  //If remaining time is less than the threshold.
       //If the user is active, reset the countdown clock back to the session timeout.
-      //Enforce strict validation on the critical session key
+      //Enforce strict validation on the critical session key.
       ok, err := sess.ExpireRedis(req.Context(), "session:" + sessionId, timeCfg.Timeout)
       if err != nil || !ok {
         sess.DelRedis(context.Background(), "user:data:" + sessionInfo.UserName)

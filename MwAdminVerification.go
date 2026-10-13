@@ -1,3 +1,12 @@
+//To fold all block comments:
+//  Ctrl+K and Ctrl+/
+//To unfold all block comments:
+//  Ctrl+K and Ctrl+J
+//
+//Build constraint: Only include this file in the build if the target OS is Linux and NOT Windows.
+//Note: There must be a blank line between the build constraints and the 'package' keyword.
+//go:build linux && !windows
+
 package middlewares
 
 import (
@@ -42,6 +51,7 @@ func AdminVerification(handler http.HandlerFunc) http.HandlerFunc {
       * Inside AdminVerification: If this fails, only the admin privilege is dead. We ONLY clear the admin_token cookie. Leave the
         Redis database untouched.
       ***/
+      http.SetCookie(res, sess.CreateCookie("admin_token", ""))
       http.Error(res, fmt.Sprintf("Error %d: ValidateSessions is required.", http.StatusUnauthorized), http.StatusUnauthorized)
       return
     }
