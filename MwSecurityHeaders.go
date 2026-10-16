@@ -10,6 +10,8 @@
 package middlewares
 
 import (
+  //go get -u github.com/juan-carlos-trimino/go-logger"
+  "github.com/juan-carlos-trimino/go-logger"
   "net/http"
 )
 
@@ -25,6 +27,15 @@ curl --verbose -k --head https://localhost:8443
 ***/
 func SecurityHeaders(handler http.HandlerFunc) http.HandlerFunc {
   return func(res http.ResponseWriter, req *http.Request) {
+    //Instantiate the context helper.
+    ck := MwContextKey{}
+    cId, ok := ck.GetCorrelationId(req.Context())
+    if !ok {
+      cId = ""
+    }
+    logger.LogInfo("*** Entering MW SecurityHeaders ***", cId)
+    //Defer the exit log so it ALWAYS fires when this function returns.
+    defer logger.LogInfo("*** Exiting MW SecurityHeaders ***", cId)
     /***
     You must manipulate the headers before you execute the inner handler.
     SET SECURITY HEADERS FIRST (Before running the handler)

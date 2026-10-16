@@ -9,6 +9,8 @@ import (
   "net/http"
   "strings"
   "time"
+  //go get -u github.com/juan-carlos-trimino/go-logger"
+  "github.com/juan-carlos-trimino/go-logger"
   //Importing the sessions package with alias "sess".
   sess "github.com/juan-carlos-trimino/go-sessions"
 )
@@ -16,6 +18,15 @@ import (
 //Protect private pages.
 func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
   return func(res http.ResponseWriter, req *http.Request) {
+    //Instantiate the context helper.
+    ck := MwContextKey{}
+    cId, ok := ck.GetCorrelationId(req.Context())
+    if !ok {
+      cId = ""
+    }
+    logger.LogInfo("*** Entering MW ValidateSessions ***", cId)
+    //Defer the exit log so it ALWAYS fires when this function returns.
+    defer logger.LogInfo("*** Exiting MW ValidateSessions ***", cId)
     //** 1. Validate HTTP Method. **
     if req.Method != http.MethodPost && req.Method != http.MethodGet {
       // http.Error(res, "Method not allowed", http.StatusMethodNotAllowed)
@@ -254,7 +265,6 @@ func ValidateSessions(handler http.HandlerFunc) http.HandlerFunc {
         }
       }
     }
-    ck := MwContextKey{}
     ctx := ck.WithSessionInfo(req.Context(), sessionInfo)
     //Proceed to handler without executing a single Redis call if time left > session timeout.
     handler.ServeHTTP(res, req.WithContext(ctx))
