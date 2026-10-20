@@ -10,7 +10,7 @@
 package middlewares
 
 import (
-  //go get -u github.com/juan-carlos-trimino/go-logger"
+  //go get -u github.com/juan-carlos-trimino/go-logger
   "github.com/juan-carlos-trimino/go-logger"
   "net/http"
 )

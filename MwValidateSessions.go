@@ -9,7 +9,7 @@ import (
   "net/http"
   "strings"
   "time"
-  //go get -u github.com/juan-carlos-trimino/go-logger"
+  //go get -u github.com/juan-carlos-trimino/go-logger
   "github.com/juan-carlos-trimino/go-logger"
   //Importing the sessions package with alias "sess".
   sess "github.com/juan-carlos-trimino/go-sessions"

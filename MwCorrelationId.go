@@ -11,7 +11,7 @@ package middlewares
 
 import (
   "fmt"
-  //go get -u github.com/juan-carlos-trimino/go-logger"
+  //go get -u github.com/juan-carlos-trimino/go-logger
   "github.com/juan-carlos-trimino/go-logger"
   //The option -u instructs 'get' to update the module with dependencies.
   //go get -u github.com/google/uuid
