@@ -1,6 +1,6 @@
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/juan-carlos-trimino/go-logger v1.0.0 h1:l2ln3Set77d6Xc2zy7ZuCPdDDLNh0ffQKEKVDSaHi9k=
-github.com/juan-carlos-trimino/go-logger v1.0.0/go.mod h1:Pkd9f+wfCnwdspXw/pufVq1nn60kn5WT1Yk4Xe8uvFQ=
+github.com/juan-carlos-trimino/go-logger v1.0.9 h1:J1LBHYWN9JDsNgiOB+wzMt2bh+P4SmvnoGIEKG6kBHc=
+github.com/juan-carlos-trimino/go-logger v1.0.9/go.mod h1:Pkd9f+wfCnwdspXw/pufVq1nn60kn5WT1Yk4Xe8uvFQ=
 github.com/juan-carlos-trimino/go-sessions v1.0.16 h1:mirE/kaYXhuXpKGRY0N7C0p1aFIm5We6nBdErQjRdvA=
 github.com/juan-carlos-trimino/go-sessions v1.0.16/go.mod h1:LngOk3dkCRu+XntbTGH++ubd12Zu6AfI9LuNrLNFSBU=
