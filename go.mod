@@ -15,16 +15,6 @@ go 1.26.4
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/juan-carlos-trimino/go-logger v1.0.9
-	github.com/juan-carlos-trimino/go-sessions v1.0.17-0.20260924021518-f17c0f9e6126
+	github.com/juan-carlos-trimino/go-logger v1.0.0
+	github.com/juan-carlos-trimino/go-sessions v1.0.16
 )
-
-require (
-	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
-	github.com/redis/go-redis/v9 v9.22.0 // indirect
-	go.uber.org/atomic v1.12.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
-)
-
-replace github.com/juan-carlos-trimino/go-sessions => ../go-sessions/
